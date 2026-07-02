@@ -20,8 +20,8 @@ public class DummyDataFactory {
         // 해싱된 비밀번호를 역추적하기 쉽도록 SQL이 아닌 애플리케이션 레벨에서 생성한다.
         String encodedPassword = passwordEncoder.encode("Test1234");
 
-        User testUser1 = new User("test1@gmail.com", encodedPassword, "테스터1");
-        User testUser2 = new User("test2@gmail.com", encodedPassword, "테스터2");
+        User testUser1 = new User("test1@gmail.com", "tester1", encodedPassword, "테스터1");
+        User testUser2 = new User("test2@gmail.com", "tester2", encodedPassword, "테스터2");
 
         userRepository.save(testUser1);
         userRepository.save(testUser2);

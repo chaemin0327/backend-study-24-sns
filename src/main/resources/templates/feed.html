@@ -189,26 +189,20 @@
     <div class="card sidebar-section">
       <h3>팔로우 / 언팔로우</h3>
       <div class="follow-form">
-        <input id="follow-target-id" type="number" placeholder="상대방 userId" />
+        <input id="follow-target-nickname" type="text" placeholder="닉네임으로 검색" />
         <button class="btn" style="padding: 6px 12px;" onclick="followUser()">팔로우</button>
       </div>
     </div>
 
+    <!-- ✅ Thymeleaf 제거 → JS로 동적 렌더링 -->
     <div class="card sidebar-section">
-      <h3 th:text="'내가 팔로우하는 사람들 (' + ${#lists.size(followings)} + '명)'"></h3>
-      <div th:if="${#lists.isEmpty(followings)}" class="empty">아직 팔로우하는 사람이 없습니다.</div>
-      <div th:each="f : ${followings}" class="follow-item">
-        <span th:text="${f.name} + ' (' + ${f.email} + ')'"></span>
-        <button class="btn-text danger" th:attr="data-userid=${f.userId}" onclick="unfollowUser(this.dataset.userid)">언팔로우</button>
-      </div>
+      <h3 id="followings-title">내가 팔로우하는 사람들</h3>
+      <div id="followings-list"><div class="empty">불러오는 중...</div></div>
     </div>
 
     <div class="card sidebar-section">
-      <h3 th:text="'나를 팔로우하는 사람들 (' + ${#lists.size(followers)} + '명)'"></h3>
-      <div th:if="${#lists.isEmpty(followers)}" class="empty">아직 팔로워가 없습니다.</div>
-      <div th:each="f : ${followers}" class="follow-item">
-        <span th:text="${f.name} + ' (' + ${f.email} + ')'"></span>
-      </div>
+      <h3 id="followers-title">나를 팔로우하는 사람들</h3>
+      <div id="followers-list"><div class="empty">불러오는 중...</div></div>
     </div>
   </div>
 </div>
@@ -237,11 +231,56 @@
       try {
         const body = await res.json();
         message = body.message || message;
-      } catch (e) { /* 응답 본문이 없는 경우 무시 */ }
+      } catch (e) { }
       throw new Error(message);
     }
-    if (res.status === 204) return null;
-    return res.json();
+    // 응답 본문이 없는 경우 (204 No Content, 201 Created 등) null 반환
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  }
+
+  // ✅ 팔로잉 목록 JS로 동적 로드
+  async function loadFollowings() {
+    const title = document.getElementById('followings-title');
+    const container = document.getElementById('followings-list');
+    try {
+      const followings = await apiFetch('/users/' + myUserId + '/followings', { headers: authHeaders() });
+      title.textContent = '내가 팔로우하는 사람들 (' + followings.length + '명)';
+      if (followings.length === 0) {
+        container.innerHTML = '<div class="empty">아직 팔로우하는 사람이 없습니다.</div>';
+        return;
+      }
+      container.innerHTML = followings.map(f => `
+        <div class="follow-item">
+          <span>${escapeHtml(f.name)} (${escapeHtml(f.email)})</span>
+          <button class="btn-text danger" onclick="unfollowUser(${f.userId})">언팔로우</button>
+        </div>
+      `).join('');
+    } catch (e) {
+      container.innerHTML = '<div class="empty">불러오지 못했습니다.</div>';
+    }
+  }
+
+  // ✅ 팔로워 목록 JS로 동적 로드
+  async function loadFollowers() {
+    const title = document.getElementById('followers-title');
+    const container = document.getElementById('followers-list');
+    try {
+      const followers = await apiFetch('/users/' + myUserId + '/followers', { headers: authHeaders() });
+      title.textContent = '나를 팔로우하는 사람들 (' + followers.length + '명)';
+      if (followers.length === 0) {
+        container.innerHTML = '<div class="empty">아직 팔로워가 없습니다.</div>';
+        return;
+      }
+      container.innerHTML = followers.map(f => `
+        <div class="follow-item">
+          <span>${escapeHtml(f.name)} (${escapeHtml(f.email)})</span>
+        </div>
+      `).join('');
+    } catch (e) {
+      container.innerHTML = '<div class="empty">불러오지 못했습니다.</div>';
+    }
   }
 
   async function loadPosts() {
@@ -259,6 +298,7 @@
       list.innerHTML = '<div class="card empty-feed">게시글을 불러오지 못했습니다.</div>';
     }
   }
+
   async function initLikeStatus(postId) {
     try {
       const liked = await apiFetch('/posts/' + postId + '/likes', { headers: authHeaders() });
@@ -277,37 +317,37 @@
   function renderPost(post) {
     const isMine = post.userId === myUserId;
     return `
-            <div class="card post" id="post-${post.id}">
-                <div class="post-header">
-                    <span class="post-author">${escapeHtml(post.userName)}</span>
-                    ${isMine ? `
-                        <span>
-                            <button class="btn-text" onclick="toggleEditPost(${post.id})">수정</button>
-                            <button class="btn-text danger" onclick="deletePost(${post.id})">삭제</button>
-                        </span>
-                    ` : ''}
-                </div>
-                <div class="post-view-${post.id}">
-                    <div class="post-title">${escapeHtml(post.title)}</div>
-                    <div class="post-content">${escapeHtml(post.content)}</div>
-                </div>
-                <div class="post-edit-area" id="post-edit-${post.id}">
-                    <input type="text" id="edit-title-${post.id}" value="${escapeAttr(post.title)}" />
-                    <textarea rows="3" id="edit-content-${post.id}">${escapeHtml(post.content)}</textarea>
-                    <button class="btn" onclick="updatePost(${post.id})">저장</button>
-                </div>
-                <div class="post-actions">
-                    <button class="btn-like" id="like-btn-${post.id}" onclick="toggleLike(${post.id})">🤍 좋아요</button>
-                </div>
-                <div class="comments" id="comments-${post.id}">
-                    <div class="comment-loading">댓글 불러오는 중...</div>
-                </div>
-                <div class="comment-form">
-                    <input type="text" id="comment-input-${post.id}" placeholder="댓글을 입력하세요" />
-                    <button class="btn-text" onclick="createComment(${post.id})">게시</button>
-                </div>
-            </div>
-        `;
+      <div class="card post" id="post-${post.id}">
+        <div class="post-header">
+          <span class="post-author">${escapeHtml(post.userName)}</span>
+          ${isMine ? `
+            <span>
+              <button class="btn-text" onclick="toggleEditPost(${post.id})">수정</button>
+              <button class="btn-text danger" onclick="deletePost(${post.id})">삭제</button>
+            </span>
+          ` : ''}
+        </div>
+        <div class="post-view-${post.id}">
+          <div class="post-title">${escapeHtml(post.title)}</div>
+          <div class="post-content">${escapeHtml(post.content)}</div>
+        </div>
+        <div class="post-edit-area" id="post-edit-${post.id}">
+          <input type="text" id="edit-title-${post.id}" value="${escapeAttr(post.title)}" />
+          <textarea rows="3" id="edit-content-${post.id}">${escapeHtml(post.content)}</textarea>
+          <button class="btn" onclick="updatePost(${post.id})">저장</button>
+        </div>
+        <div class="post-actions">
+          <button class="btn-like" id="like-btn-${post.id}" onclick="toggleLike(${post.id})">🤍 좋아요</button>
+        </div>
+        <div class="comments" id="comments-${post.id}">
+          <div class="comment-loading">댓글 불러오는 중...</div>
+        </div>
+        <div class="comment-form">
+          <input type="text" id="comment-input-${post.id}" placeholder="댓글을 입력하세요" />
+          <button class="btn-text" onclick="createComment(${post.id})">게시</button>
+        </div>
+      </div>
+    `;
   }
 
   function toggleEditPost(postId) {
@@ -373,21 +413,16 @@
         await apiFetch('/posts/' + postId + '/likes', { method: 'DELETE', headers: authHeaders() });
         likedPosts.delete(postId);
         btn.textContent = '🤍 좋아요';
+        btn.style.color = '';
       } else {
         await apiFetch('/posts/' + postId + '/likes', { method: 'POST', headers: authHeaders() });
         likedPosts.add(postId);
         btn.textContent = '❤️ 좋아요 취소';
+        btn.style.color = '#ed4956';
       }
     } catch (e) {
       showToast(e.message);
     }
-    // 좋아요 취소 성공 시
-    btn.textContent = '🤍 좋아요';
-    btn.style.color = '';
-
-  // 좋아요 성공 시
-    btn.textContent = '❤️ 좋아요 취소';
-    btn.style.color = '#ed4956';
   }
 
   async function loadComments(postId) {
@@ -407,22 +442,22 @@
   function renderComment(postId, comment) {
     const isMine = comment.userId === myUserId;
     return `
-            <div class="comment-item">
-                <div class="comment-view-${comment.id}">
-                    <b>#${comment.userId}</b>${escapeHtml(comment.content)}
-                </div>
-                ${isMine ? `
-                    <span>
-                        <button class="btn-text" onclick="toggleEditComment(${comment.id})">수정</button>
-                        <button class="btn-text danger" onclick="deleteComment(${postId}, ${comment.id})">삭제</button>
-                    </span>
-                ` : ''}
-            </div>
-            <div class="comment-edit-area" id="comment-edit-${comment.id}">
-                <input type="text" id="comment-edit-input-${comment.id}" value="${escapeAttr(comment.content)}" />
-                <button class="btn-text" onclick="updateComment(${postId}, ${comment.id})">저장</button>
-            </div>
-        `;
+      <div class="comment-item">
+        <div class="comment-view-${comment.id}">
+          <b>#${comment.userId}</b>${escapeHtml(comment.content)}
+        </div>
+        ${isMine ? `
+          <span>
+            <button class="btn-text" onclick="toggleEditComment(${comment.id})">수정</button>
+            <button class="btn-text danger" onclick="deleteComment(${postId}, ${comment.id})">삭제</button>
+          </span>
+        ` : ''}
+      </div>
+      <div class="comment-edit-area" id="comment-edit-${comment.id}">
+        <input type="text" id="comment-edit-input-${comment.id}" value="${escapeAttr(comment.content)}" />
+        <button class="btn-text" onclick="updateComment(${postId}, ${comment.id})">저장</button>
+      </div>
+    `;
   }
 
   function toggleEditComment(commentId) {
@@ -469,13 +504,19 @@
     }
   }
 
+  // ✅ location.reload() 제거 → loadFollowings/loadFollowers 호출로 교체
   async function followUser() {
-    const targetId = document.getElementById('follow-target-id').value.trim();
-    if (!targetId) return;
+    const nickname = document.getElementById('follow-target-nickname').value.trim();
+    if (!nickname) return;
     try {
-      await apiFetch('/users/' + targetId + '/follow', { method: 'POST', headers: authHeaders() });
+      await apiFetch('/users/follow-by-nickname?nickname=' + encodeURIComponent(nickname), {
+        method: 'POST',
+        headers: authHeaders()
+      });
+      document.getElementById('follow-target-nickname').value = '';
       showToast('팔로우했습니다.');
-      location.reload();
+      loadFollowings();
+      loadFollowers();
     } catch (e) {
       showToast(e.message);
     }
@@ -485,7 +526,8 @@
     try {
       await apiFetch('/users/' + targetId + '/follow', { method: 'DELETE', headers: authHeaders() });
       showToast('언팔로우했습니다.');
-      location.reload();
+      loadFollowings();
+      loadFollowers();
     } catch (e) {
       showToast(e.message);
     }
@@ -500,6 +542,8 @@
   }
 
   loadPosts();
+  loadFollowings();
+  loadFollowers();
 </script>
 </body>
 </html>
