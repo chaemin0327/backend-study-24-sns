@@ -7,6 +7,7 @@ import com.example.sns.entity.Post;
 import com.example.sns.entity.User;
 import com.example.sns.exception.CustomException;
 import com.example.sns.exception.ErrorCode;
+import com.example.sns.repository.PostLikeRepository;
 import com.example.sns.repository.PostRepository;
 import com.example.sns.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
 
     @Transactional
     public PostResponse createPost(Long userId, PostCreateRequest request) {
@@ -29,12 +31,13 @@ public class PostService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Post post = new Post(request.title(), request.content(), user);
-        return PostResponse.from(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        return PostResponse.from(savedPost, postLikeRepository.countByPost(savedPost));
     }
 
     public List<PostResponse> getPosts() {
         return postRepository.findAllWithUser().stream()
-                .map(PostResponse::from)
+                .map(post -> PostResponse.from(post, postLikeRepository.countByPost(post)))
                 .collect(Collectors.toList());
     }
 
@@ -42,7 +45,7 @@ public class PostService {
     public PostResponse getPost(Long id) {
         Post post = postRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-        return PostResponse.from(post);
+        return PostResponse.from(post, postLikeRepository.countByPost(post));
     }
 
     @Transactional
@@ -54,7 +57,7 @@ public class PostService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         post.update(request.title(), request.content(), requester);
-        return PostResponse.from(post);
+        return PostResponse.from(post, postLikeRepository.countByPost(post));
     }
 
     @Transactional

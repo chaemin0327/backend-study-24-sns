@@ -14,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -22,6 +25,17 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+
+    // 특정 게시글의 댓글 목록을 조회한다.
+    public List<CommentResponse> getComments(Long postId) {
+        // 게시글이 존재하는지 먼저 확인한다.
+        postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        return commentRepository.findAllByPostId(postId).stream()
+                .map(CommentResponse::from)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public CommentResponse createComment(Long postId, Long userId, CommentRequest request) {

@@ -10,12 +10,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/posts/{postId}/comments")
 @RequiredArgsConstructor
 public class CommentController {
 
     private final CommentService commentService;
+
+    // 특정 게시글의 댓글 목록을 조회한다.
+    @GetMapping
+    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long postId) {
+        return ResponseEntity.ok(commentService.getComments(postId));
+    }
 
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(

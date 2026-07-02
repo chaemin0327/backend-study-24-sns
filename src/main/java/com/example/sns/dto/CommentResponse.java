@@ -6,6 +6,7 @@ public record CommentResponse(
         Long id,
         String content,
         Long userId,
+        String userName,
         Long postId
 ) {
     public static CommentResponse from(Comment comment) {
@@ -13,6 +14,7 @@ public record CommentResponse(
                 comment.getId(),
                 comment.getContent(),
                 comment.getUser().getId(),
+                comment.getUser().getName(),
                 comment.getPost().getId()
         );
     }

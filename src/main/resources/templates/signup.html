@@ -140,6 +140,29 @@
             alert('모든 항목을 올바르게 입력해주세요.');
         }
     });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // 기본 제출 동작을 막습니다.
+
+            // 1. 현재 화면에 있는 입력창들의 순서를 배열로 정리
+            const inputs = ['email', 'nickname', 'name', 'password'];
+            const currentIndex = inputs.indexOf(event.target.id);
+
+            if (currentIndex !== -1) {
+                // 2. 엔터를 치는 순간 강제로 blur()를 실행해서 실시간 검증을 통과시킵니다.
+                event.target.blur();
+
+                // 3. 마지막 칸(비밀번호)이 아니라면 다음 칸으로 커서를 이동시킵니다.
+                if (currentIndex < inputs.length - 1) {
+                    document.getElementById(inputs[currentIndex + 1]).focus();
+                }
+                // 4. 마지막 칸이라면 '회원가입' 버튼을 클릭합니다.
+                else {
+                    document.getElementById('submit-btn').click();
+                }
+            }
+        }
+    });
 </script>
 </body>
 </html>

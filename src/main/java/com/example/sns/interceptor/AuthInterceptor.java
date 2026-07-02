@@ -20,8 +20,17 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 
-        // 추가된 부분: 조회를 위한 GET 요청이나 CORS를 위한 OPTIONS 요청은 토큰 검사 없이 통과시킨다.
+        // 추가된 부분: 조회를 위한 GET 요청이나 CORS를 위한 OPTIONS 요청은 토큰이 없어도 통과시킨다.
+        // 단, GET 요청이라도 토큰이 있으면 파싱해서 userId를 세팅해준다.
+        // (예: 좋아요 여부 확인 GET /posts/{id}/likes 처럼 "로그인은 필요없지만 로그인했으면 내 정보가 필요한" API 대응)
         if (request.getMethod().equals("GET") || request.getMethod().equals("OPTIONS")) {
+            String optionalHeader = request.getHeader("Authorization");
+            if (optionalHeader != null && optionalHeader.startsWith("Bearer ")) {
+                String optionalToken = optionalHeader.replace("Bearer ", "");
+                if (jwtProvider.validateToken(optionalToken)) {
+                    request.setAttribute("userId", jwtProvider.getUserIdFromToken(optionalToken));
+                }
+            }
             return true;
         }
 
