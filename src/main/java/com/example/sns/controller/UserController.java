@@ -33,4 +33,16 @@ public class UserController {
         String refreshToken = authHeader.replace("Bearer ", "");
         return ResponseEntity.ok(userService.reissue(refreshToken));
     }
+
+    // 회원가입 실시간 이메일 중복 체크 — signup.html에서 blur 이벤트로 호출
+    @GetMapping("/check-email")
+    public ResponseEntity<Boolean> checkEmail(@RequestParam String email) {
+        return ResponseEntity.ok(userService.existsByEmail(email));
+    }
+
+    // 회원가입 실시간 닉네임 중복 체크 — signup.html에서 blur 이벤트로 호출
+    @GetMapping("/check-nickname")
+    public ResponseEntity<Boolean> checkNickname(@RequestParam String nickname) {
+        return ResponseEntity.ok(userService.existsByNickname(nickname));
+    }
 }

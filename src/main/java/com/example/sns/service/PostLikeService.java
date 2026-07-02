@@ -48,4 +48,11 @@ public class PostLikeService {
 
         postLikeRepository.delete(postLike);
     }
+    public boolean isLiked(Long postId, Long userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        return postLikeRepository.existsByUserAndPost(user, post);
+    }
 }

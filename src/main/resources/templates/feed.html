@@ -254,9 +254,24 @@
       }
       list.innerHTML = posts.map(renderPost).join('');
       posts.forEach(p => loadComments(p.id));
+      posts.forEach(p => initLikeStatus(p.id));
     } catch (e) {
       list.innerHTML = '<div class="card empty-feed">게시글을 불러오지 못했습니다.</div>';
     }
+  }
+  async function initLikeStatus(postId) {
+    try {
+      const liked = await apiFetch('/posts/' + postId + '/likes', { headers: authHeaders() });
+      const btn = document.getElementById('like-btn-' + postId);
+      if (liked) {
+        likedPosts.add(postId);
+        btn.textContent = '❤️ 좋아요 취소';
+        btn.style.color = '#ed4956';
+      } else {
+        btn.textContent = '🤍 좋아요';
+        btn.style.color = '';
+      }
+    } catch (e) { /* 무시 */ }
   }
 
   function renderPost(post) {
@@ -366,6 +381,13 @@
     } catch (e) {
       showToast(e.message);
     }
+    // 좋아요 취소 성공 시
+    btn.textContent = '🤍 좋아요';
+    btn.style.color = '';
+
+  // 좋아요 성공 시
+    btn.textContent = '❤️ 좋아요 취소';
+    btn.style.color = '#ed4956';
   }
 
   async function loadComments(postId) {

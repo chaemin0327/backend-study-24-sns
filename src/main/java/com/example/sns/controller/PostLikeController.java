@@ -33,4 +33,12 @@ public class PostLikeController {
         postLikeService.removeLike(postId, userId);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping
+    public ResponseEntity<Boolean> checkLike(
+            @PathVariable Long postId,
+            HttpServletRequest httpRequest) {
+        Long userId = (Long) httpRequest.getAttribute("userId");
+        boolean liked = postLikeService.isLiked(postId, userId);
+        return ResponseEntity.ok(liked);
+    }
 }

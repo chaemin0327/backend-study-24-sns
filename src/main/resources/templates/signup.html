@@ -8,7 +8,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #fafafa;
             font-family: Arial, sans-serif;
@@ -22,15 +22,24 @@
             text-align: center;
         }
         h1 { font-size: 28px; margin-bottom: 24px; color: #262626; }
+        .field { margin-bottom: 12px; text-align: left; }
         input {
             width: 100%;
             padding: 10px;
-            margin-bottom: 12px;
             border: 1px solid #dbdbdb;
             border-radius: 4px;
             box-sizing: border-box;
             font-size: 14px;
         }
+        input.error { border-color: #ed4956; }
+        input.success { border-color: #2ecc71; }
+        .field-msg {
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 16px;
+        }
+        .field-msg.error { color: #ed4956; }
+        .field-msg.success { color: #2ecc71; }
         button {
             width: 100%;
             padding: 10px;
@@ -40,9 +49,10 @@
             border-radius: 4px;
             font-size: 14px;
             cursor: pointer;
+            margin-top: 4px;
         }
         button:hover { background-color: #0081d6; }
-        .error { color: red; font-size: 13px; margin-bottom: 12px; }
+        button:disabled { background-color: #b2dffc; cursor: not-allowed; }
         .login-link { margin-top: 16px; font-size: 13px; color: #555; }
         .login-link a { color: #0095f6; text-decoration: none; }
     </style>
@@ -50,16 +60,86 @@
 <body>
 <div class="signup-box">
     <h1>SNS</h1>
-    <p class="error" th:if="${error}" th:text="${error}"></p>
-    <form method="post" action="/signup">
-        <input type="email" name="email" placeholder="이메일" required />
-        <input type="password" name="password" placeholder="비밀번호 (8자 이상, 영문+숫자)" required />
-        <input type="text" name="name" placeholder="이름" required />
-        <button type="submit">회원가입</button>
+    <form method="post" action="/signup" id="signup-form">
+        <div class="field">
+            <input type="email" name="email" id="email" placeholder="이메일" required />
+            <div class="field-msg" id="email-msg"></div>
+        </div>
+        <div class="field">
+            <input type="text" name="nickname" id="nickname" placeholder="닉네임" required />
+            <div class="field-msg" id="nickname-msg"></div>
+        </div>
+        <div class="field">
+            <input type="text" name="name" id="name" placeholder="이름" required />
+            <div class="field-msg" id="name-msg"></div>
+        </div>
+        <div class="field">
+            <input type="password" name="password" id="password" placeholder="비밀번호 (8자 이상, 영문+숫자)" required />
+            <div class="field-msg" id="password-msg"></div>
+        </div>
+        <button type="submit" id="submit-btn">회원가입</button>
     </form>
     <div class="login-link">
         이미 계정이 있으신가요? <a href="/login">로그인</a>
     </div>
 </div>
+
+<script>
+    const status = { email: false, nickname: false, name: false, password: false };
+
+    function setMsg(id, msg, isOk) {
+        const el = document.getElementById(id + '-msg');
+        const input = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'field-msg ' + (isOk ? 'success' : 'error');
+        input.className = isOk ? 'success' : 'error';
+        status[id] = isOk;
+    }
+
+    // 이메일 — 형식 체크 + 중복 체크
+    document.getElementById('email').addEventListener('blur', async function () {
+        const val = this.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!val) { setMsg('email', '이메일을 입력해주세요.', false); return; }
+        if (!emailRegex.test(val)) { setMsg('email', '이메일 형식이 올바르지 않습니다.', false); return; }
+        const res = await fetch('/users/check-email?email=' + encodeURIComponent(val));
+        const exists = await res.json();
+        exists ? setMsg('email', '이미 사용 중인 이메일입니다.', false)
+            : setMsg('email', '사용 가능한 이메일입니다.', true);
+    });
+
+    // 닉네임 — 중복 체크
+    document.getElementById('nickname').addEventListener('blur', async function () {
+        const val = this.value.trim();
+        if (!val) { setMsg('nickname', '닉네임을 입력해주세요.', false); return; }
+        const res = await fetch('/users/check-nickname?nickname=' + encodeURIComponent(val));
+        const exists = await res.json();
+        exists ? setMsg('nickname', '이미 사용 중인 닉네임입니다.', false)
+            : setMsg('nickname', '사용 가능한 닉네임입니다.', true);
+    });
+
+    // 이름 — 빈값만 체크
+    document.getElementById('name').addEventListener('blur', function () {
+        const val = this.value.trim();
+        val ? setMsg('name', '확인됐습니다.', true)
+            : setMsg('name', '이름을 입력해주세요.', false);
+    });
+
+    // 비밀번호 — 정규식 체크
+    document.getElementById('password').addEventListener('blur', function () {
+        const val = this.value;
+        const ok = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/.test(val);
+        ok ? setMsg('password', '사용 가능한 비밀번호입니다.', true)
+            : setMsg('password', '8자 이상, 영문자와 숫자를 포함해야 합니다.', false);
+    });
+
+    // 제출 전 최종 검증
+    document.getElementById('signup-form').addEventListener('submit', function (e) {
+        if (!Object.values(status).every(Boolean)) {
+            e.preventDefault();
+            alert('모든 항목을 올바르게 입력해주세요.');
+        }
+    });
+</script>
 </body>
 </html>

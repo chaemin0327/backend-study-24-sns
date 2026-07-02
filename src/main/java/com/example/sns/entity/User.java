@@ -20,16 +20,21 @@ public class User {
 
     private String name;
 
-    @Column(unique = true) // 추가
+    @Column(unique = true)
     private String email;
+
+    @Column(unique = true)
+    private String nickname;
+
     private String password;
-    private String refreshToken; // 추가
+    private String refreshToken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Post> posts = new ArrayList<>();
 
-    public User(String email, String password, String name) {
+    public User(String email, String nickname, String password, String name) {
         this.email = email;
+        this.nickname = nickname;
         this.password = password;
         this.name = name;
     }

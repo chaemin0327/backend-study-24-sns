@@ -26,7 +26,8 @@ public enum ErrorCode {
     CANNOT_FOLLOW_YOURSELF(HttpStatus.BAD_REQUEST, "자기 자신을 팔로우할 수 없습니다."),
 
     // AUTH (인증) 분야 에러
-    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 토큰입니다.");
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 토큰입니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
 
     private final HttpStatus status;
     private final String message;
@@ -36,6 +37,7 @@ public enum ErrorCode {
         this.message = message;
     }
 
+
     public HttpStatus getStatus() {
         return status;
     }
@@ -43,4 +45,4 @@ public enum ErrorCode {
     public String getMessage() {
         return message;
     }
-}
+    }
